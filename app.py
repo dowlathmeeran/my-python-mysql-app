@@ -1,75 +1,59 @@
-from tabulate import tabulate
+from flask import Flask, request, jsonify
 import mysql.connector
-con = mysql.connector.connect(host = 'localhost', username = "root", passwd = "root", database = "crud_operation")
 
+app = Flask(__name__)
 
-def insert(name,age,city):
-    res = con.cursor()
-    sql='insert into crud(name,age,city) values (%s,%s,%s)'
-    user = (name,age,city)
-    res.execute(sql,user)
-    con.commit()
-    print("Data Inserted Successfully")
+def get_db_connection():
+    connection = mysql.connector.connect(
+        host='mysql_host',
+        user='mysql_user',
+        password='mysql_password',
+        database='mysql_db'
+    )
+    return connection
 
-def update(name,age,city,id):
-    res = con.cursor()
-    sql='update crud set name=%s,age=%s,city=%s where id=%s'
-    user=(name,age,city,id)
-    res.execute(sql,user)
-    con.commit()
-    print("Data Updated Successfully")
+@app.route('/create', methods=['POST'])
+def create():
+    data = request.json
+    connection = get_db_connection()
+    cursor = connection.cursor()
+    cursor.execute("INSERT INTO my_table (name) VALUES (%s)", (data['name'],))
+    connection.commit()
+    cursor.close()
+    connection.close()
+    return jsonify({'message': 'Record created'}), 201
 
-def select():
-    res = con.cursor()
-    sql = 'select * from crud'
-    res.execute(sql)
-    #result=res.fetchone()
-    #result=res.fetchmany(2)
-    result=res.fetchall()
-    print(tabulate(result,headers=['ID','NAME','AGE','CITY']))
+@app.route('/read', methods=['GET'])
+def read():
+    connection = get_db_connection()
+    cursor = connection.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM my_table")
+    rows = cursor.fetchall()
+    cursor.close()
+    connection.close()
+    return jsonify(rows), 200
 
-def delete(id):
-    res = con.cursor()
-    sql='delete from crud where id=%s'
-    user=(id,)
-    res.execute(sql,user)
-    con.commit()
-    print("Data Deleted Successfully")
+@app.route('/update', methods=['PUT'])
+def update():
+    data = request.json
+    connection = get_db_connection()
+    cursor = connection.cursor()
+    cursor.execute("UPDATE my_table SET name = %s WHERE id = %s", (data['name'], data['id']))
+    connection.commit()
+    cursor.close()
+    connection.close()
+    return jsonify({'message': 'Record updated'}), 200
 
+@app.route('/delete', methods=['DELETE'])
+def delete():
+    data = request.json
+    connection = get_db_connection()
+    cursor = connection.cursor()
+    cursor.execute("DELETE FROM my_table WHERE id = %s", (data['id'],))
+    connection.commit()
+    cursor.close()
+    connection.close()
+    return jsonify({'message': 'Record deleted'}), 200
 
-while True:
-    print("1.Insert data")
-    print("2.Update data")
-    print("3.Select data")
-    print("4.Delete data")
-    print("5.Exit")
-
-    choice = int(input("Enter your choice:"))
-
-    if choice == 1:
-        name = input("Enter your name:")
-        age = int(input("Enter your age:"))
-        city = input("Enter your city:")
-        insert(name,age,city)
-
-    elif choice == 2:
-        id=int(input("Enter id:"))
-        name = input("Enter your name:")
-        age = int(input("Enter your age:"))
-        city = input("Enter your city:")
-        update(name,age,city,id)
-        
-    elif choice == 3:
-        select()
-        
-    elif choice == 4:
-        id = int(input("Enter the ID to delete:"))
-        delete(id)
-        
-    elif choice == 5:
-        quit()
-
-    else:
-        print("Invalid Selection. Please Try Again!")
-        
-
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
