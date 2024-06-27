@@ -1,2 +1,2 @@
 mysql-connector-python
-tabulate
+flask
